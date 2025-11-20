@@ -215,6 +215,74 @@
         gap: 20px;
       }
 
+      .helper-text {
+        margin-bottom: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .study-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 16px;
+        width: 100%;
+        margin-top: 16px;
+      }
+
+      .study-column {
+        background: #f8fbff;
+        border-radius: 14px;
+        border: 1px solid rgba(13, 71, 161, 0.08);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .study-column__title {
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 6px;
+      }
+
+      .form-footer {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        align-items: end;
+        margin-top: 18px;
+      }
+
+      .form-footer__action {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .result-card__header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .ghost-button {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid rgba(13, 71, 161, 0.25);
+        box-shadow: none;
+        padding: 10px 14px;
+        width: auto;
+        border-radius: 10px;
+      }
+
+      .ghost-button:hover {
+        transform: none;
+        background: rgba(13, 71, 161, 0.06);
+        box-shadow: none;
+      }
+
       /* Tooltip simples para o gráfico */
       .chart-tooltip {
         position: absolute;
@@ -262,6 +330,10 @@
     page-break-after: always;
   }
 
+  .result-card__header .ghost-button {
+    display: none !important;
+  }
+
   /* Remove sombras, bordas fortes, etc, pra economizar tinta */
   .card {
     box-shadow: none !important;
@@ -277,44 +349,32 @@
     </header>
     <main>
       <section class="card">
-        <div>
-          <label for="feature">Nome da característica</label>
-          <input type="text" id="feature" placeholder="Ex.: Diâmetro do eixo" />
-        </div>
-        <div class="input-grid">
+        <p class="helper-text">
+          Preencha até 10 colunas simultaneamente. Os campos vazios são ignorados.
+          Caso uma coluna tenha algum preenchimento incompleto, um aviso exibirá em
+          qual coluna está o problema.
+        </p>
+        <div id="studyGrid" class="study-grid"></div>
+        <div class="form-footer">
           <div>
-            <label for="lsl">LSL (Limite Inferior)</label>
-            <input type="number" id="lsl" step="any" />
+            <label for="reportLanguage">Idioma do relatório</label>
+            <select id="reportLanguage">
+              <option value="pt">Português</option>
+              <option value="en">Inglês</option>
+              <option value="es">Espanhol</option>
+              <option value="fr">Francês</option>
+              <option value="de">Alemão</option>
+              <option value="zh">Chinês</option>
+              <option value="ja">Japonês</option>
+              <option value="ko">Coreano</option>
+              <option value="it">Italiano</option>
+            </select>
           </div>
-          <div>
-            <label for="usl">USL (Limite Superior)</label>
-            <input type="number" id="usl" step="any" />
-          </div>
-          <div>
-            <label for="subgroup">Tamanho do subgrupo</label>
-            <input type="number" id="subgroup" min="1" value="5" />
+          <div class="form-footer__action">
+            <button id="calcBtn" onclick="handleCalculate()">Calcular Capabilidade</button>
+            <p id="status" style="text-align:center; margin: 0; font-weight:600;"></p>
           </div>
         </div>
-        <div>
-          <label for="values">Valores das medições (um valor por linha)</label>
-          <textarea id="values" placeholder="Cole os valores aqui..."></textarea>
-        </div>
-        <div>
-          <label for="reportLanguage">Idioma do relatório</label>
-          <select id="reportLanguage">
-            <option value="pt">Português</option>
-            <option value="en">Inglês</option>
-            <option value="es">Espanhol</option>
-            <option value="fr">Francês</option>
-            <option value="de">Alemão</option>
-            <option value="zh">Chinês</option>
-            <option value="ja">Japonês</option>
-            <option value="ko">Coreano</option>
-            <option value="it">Italiano</option>
-          </select>
-        </div>
-        <button id="calcBtn" onclick="handleCalculate()">Calcular Capabilidade</button>
-        <p id="status" style="text-align:center; margin-top:10px; font-weight:600;"></p>
       </section>
 
       <section id="resultsSection">
@@ -334,6 +394,9 @@
       // =========================
       //   CÁLCULO ESTATÍSTICO
       // =========================
+
+      var STUDY_COLUMN_COUNT = 10;
+      var studyInputs = [];
 
       function processAndCalculate(featureName, rawDataText, lsl, usl, subgroupSize) {
         var data = rawDataText
@@ -470,6 +533,90 @@
 
         if (denominator === 0) return 0;
         return Math.sqrt(numerator / denominator);
+      }
+
+      function buildStudyGrid() {
+        var container = document.getElementById('studyGrid');
+        if (!container) return;
+
+        container.innerHTML = '';
+        studyInputs = [];
+
+        for (var i = 0; i < STUDY_COLUMN_COUNT; i++) {
+          var columnNumber = i + 1;
+          var column = document.createElement('div');
+          column.className = 'study-column';
+
+          var title = document.createElement('div');
+          title.className = 'study-column__title';
+          title.textContent = 'Coluna ' + columnNumber;
+          column.appendChild(title);
+
+          var subgroupId = 'subgroup-' + columnNumber;
+          var lslId = 'lsl-' + columnNumber;
+          var uslId = 'usl-' + columnNumber;
+          var valuesId = 'values-' + columnNumber;
+
+          var subgroupLabel = document.createElement('label');
+          subgroupLabel.setAttribute('for', subgroupId);
+          subgroupLabel.textContent = 'Tamanho do subgrupo';
+          var subgroupInput = document.createElement('input');
+          subgroupInput.type = 'number';
+          subgroupInput.min = '1';
+          subgroupInput.placeholder = '5';
+          subgroupInput.id = subgroupId;
+
+          var lslLabel = document.createElement('label');
+          lslLabel.setAttribute('for', lslId);
+          lslLabel.textContent = 'LSL (Limite Inferior)';
+          var lslInput = document.createElement('input');
+          lslInput.type = 'number';
+          lslInput.step = 'any';
+          lslInput.id = lslId;
+
+          var uslLabel = document.createElement('label');
+          uslLabel.setAttribute('for', uslId);
+          uslLabel.textContent = 'USL (Limite Superior)';
+          var uslInput = document.createElement('input');
+          uslInput.type = 'number';
+          uslInput.step = 'any';
+          uslInput.id = uslId;
+
+          var valuesLabel = document.createElement('label');
+          valuesLabel.setAttribute('for', valuesId);
+          valuesLabel.textContent = 'Valores das medições (um valor por linha)';
+          var valuesTextarea = document.createElement('textarea');
+          valuesTextarea.id = valuesId;
+          valuesTextarea.placeholder = 'Cole os valores aqui...';
+
+          column.appendChild(subgroupLabel);
+          column.appendChild(subgroupInput);
+          column.appendChild(lslLabel);
+          column.appendChild(lslInput);
+          column.appendChild(uslLabel);
+          column.appendChild(uslInput);
+          column.appendChild(valuesLabel);
+          column.appendChild(valuesTextarea);
+
+          studyInputs.push({
+            columnNumber: columnNumber,
+            subgroup: subgroupInput,
+            lsl: lslInput,
+            usl: uslInput,
+            values: valuesTextarea
+          });
+
+          container.appendChild(column);
+        }
+      }
+
+      function resetStudyInputs() {
+        studyInputs.forEach(function (inputSet) {
+          inputSet.subgroup.value = '';
+          inputSet.lsl.value = '';
+          inputSet.usl.value = '';
+          inputSet.values.value = '';
+        });
       }
 
       // =========================
@@ -624,34 +771,68 @@
       // =========================
 
       function handleCalculate() {
-        var feature = document.getElementById('feature').value.trim();
-        var lsl = document.getElementById('lsl').value;
-        var usl = document.getElementById('usl').value;
-        var subgroup = document.getElementById('subgroup').value;
-        var values = document.getElementById('values').value;
         var reportLanguage = document.getElementById('reportLanguage').value;
         var statusEl = document.getElementById('status');
         var button = document.getElementById('calcBtn');
-
-        if (!values.trim()) {
-          alert('Informe os valores de medição.');
-          return;
-        }
+        var preparedResults = [];
+        var hasAnyFilled = false;
 
         button.disabled = true;
         statusEl.textContent = 'Calculando...';
 
-        try {
-          var result = processAndCalculate(feature, values, lsl, usl, subgroup);
-          statusEl.textContent = '';
-          button.disabled = false;
-          result.reportLanguage = reportLanguage;
-          renderResults(result);
-        } catch (err) {
-          statusEl.textContent = '';
-          button.disabled = false;
-          alert('Erro: ' + err.message);
+        for (var i = 0; i < studyInputs.length; i++) {
+          var set = studyInputs[i];
+          var columnLabel = 'coluna ' + set.columnNumber;
+          var lsl = set.lsl.value;
+          var usl = set.usl.value;
+          var subgroup = set.subgroup.value;
+          var values = set.values.value;
+
+          var hasContent =
+            (lsl && lsl.trim() !== '') ||
+            (usl && usl.trim() !== '') ||
+            (subgroup && subgroup.trim() !== '') ||
+            (values && values.trim() !== '');
+
+          if (!hasContent) {
+            continue;
+          }
+
+          hasAnyFilled = true;
+
+          if (!values.trim()) {
+            statusEl.textContent = '';
+            button.disabled = false;
+            alert('Há falhas no preenchimento da ' + columnLabel + ': informe os valores das medições.');
+            return;
+          }
+
+          try {
+            var featureName = 'Estudo ' + set.columnNumber;
+            var result = processAndCalculate(featureName, values, lsl, usl, subgroup);
+            result.reportLanguage = reportLanguage;
+            preparedResults.push(result);
+          } catch (err) {
+            statusEl.textContent = '';
+            button.disabled = false;
+            alert('Há falhas no preenchimento da ' + columnLabel + ': ' + err.message);
+            return;
+          }
         }
+
+        if (!hasAnyFilled) {
+          statusEl.textContent = '';
+          button.disabled = false;
+          alert('Preencha pelo menos uma coluna para calcular.');
+          return;
+        }
+
+        preparedResults.forEach(function (result) {
+          renderResults(result);
+        });
+
+        statusEl.textContent = '';
+        button.disabled = false;
       }
 
       function renderResults(result) {
@@ -662,6 +843,9 @@
         var entry = createResultCard(result);
         collection.appendChild(entry.card);
         resultEntries.push(entry);
+        entry.deleteButton.addEventListener('click', function () {
+          removeResult(entry);
+        });
         updateActionButtons();
 
         requestAnimationFrame(function () {
@@ -675,9 +859,20 @@
         var card = document.createElement('section');
         card.className = 'card result-card';
 
+        var header = document.createElement('div');
+        header.className = 'result-card__header';
+
         var title = document.createElement('h2');
         var featureName = result.featureName || translate(lang, 'defaultFeatureName');
         title.textContent = formatReportTitle(lang, featureName);
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'ghost-button';
+        deleteBtn.textContent = 'Excluir estudo';
+
+        header.appendChild(title);
+        header.appendChild(deleteBtn);
 
         var chartContainer = document.createElement('div');
         chartContainer.className = 'chart-container';
@@ -686,14 +881,15 @@
         var statsContainer = document.createElement('div');
         statsContainer.className = 'stats';
 
-        card.appendChild(title);
+        card.appendChild(header);
         card.appendChild(chartContainer);
         card.appendChild(statsContainer);
 
         return {
           card: card,
           chartContainer: chartContainer,
-          statsContainer: statsContainer
+          statsContainer: statsContainer,
+          deleteButton: deleteBtn
         };
       }
 
@@ -1128,12 +1324,25 @@
 
         document.getElementById('resultsSection').style.display = 'none';
         document.getElementById('status').textContent = '';
+        resetStudyInputs();
 
-        document.getElementById('feature').value = '';
-        document.getElementById('lsl').value = '';
-        document.getElementById('usl').value = '';
-        document.getElementById('subgroup').value = 5;
-        document.getElementById('values').value = '';
+        updateActionButtons();
+      }
+
+      function removeResult(entry) {
+        var collection = document.getElementById('resultsCollection');
+        if (entry && entry.card && collection.contains(entry.card)) {
+          collection.removeChild(entry.card);
+        }
+
+        var idx = resultEntries.indexOf(entry);
+        if (idx !== -1) {
+          resultEntries.splice(idx, 1);
+        }
+
+        if (resultEntries.length === 0) {
+          document.getElementById('resultsSection').style.display = 'none';
+        }
 
         updateActionButtons();
       }
@@ -1189,10 +1398,12 @@
         reportWindow.document.open();
         reportWindow.document.write(reportHtml);
         reportWindow.document.close();
+        reportWindow.focus();
       }
 
-
-
+      document.addEventListener('DOMContentLoaded', function () {
+        buildStudyGrid();
+      });
 
       window.addEventListener('beforeunload', function (event) {
         if (resultEntries.length > 0) {
