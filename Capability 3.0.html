@@ -223,7 +223,7 @@
 
       .study-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 16px;
         width: 100%;
         margin-top: 16px;
@@ -350,9 +350,9 @@
     <main>
       <section class="card">
         <p class="helper-text">
-          Preencha até 10 colunas simultaneamente. Os campos vazios são ignorados.
-          Caso uma coluna tenha algum preenchimento incompleto, um aviso exibirá em
-          qual coluna está o problema.
+          Preencha até 4 estudos simultaneamente. Os campos vazios são ignorados.
+          Caso um estudo tenha algum preenchimento incompleto, um aviso exibirá em
+          qual estudo está o problema.
         </p>
         <div id="studyGrid" class="study-grid"></div>
         <div class="form-footer">
@@ -395,7 +395,7 @@
       //   CÁLCULO ESTATÍSTICO
       // =========================
 
-      var STUDY_COLUMN_COUNT = 10;
+      var STUDY_COLUMN_COUNT = 4;
       var studyInputs = [];
 
       function processAndCalculate(featureName, rawDataText, lsl, usl, subgroupSize) {
@@ -549,13 +549,22 @@
 
           var title = document.createElement('div');
           title.className = 'study-column__title';
-          title.textContent = 'Coluna ' + columnNumber;
+          title.textContent = 'Estudo ' + columnNumber;
           column.appendChild(title);
 
+          var featureId = 'feature-' + columnNumber;
           var subgroupId = 'subgroup-' + columnNumber;
           var lslId = 'lsl-' + columnNumber;
           var uslId = 'usl-' + columnNumber;
           var valuesId = 'values-' + columnNumber;
+
+          var featureLabel = document.createElement('label');
+          featureLabel.setAttribute('for', featureId);
+          featureLabel.textContent = 'Característica';
+          var featureInput = document.createElement('input');
+          featureInput.type = 'text';
+          featureInput.id = featureId;
+          featureInput.placeholder = 'Informe a característica do estudo';
 
           var subgroupLabel = document.createElement('label');
           subgroupLabel.setAttribute('for', subgroupId);
@@ -589,6 +598,8 @@
           valuesTextarea.id = valuesId;
           valuesTextarea.placeholder = 'Cole os valores aqui...';
 
+          column.appendChild(featureLabel);
+          column.appendChild(featureInput);
           column.appendChild(subgroupLabel);
           column.appendChild(subgroupInput);
           column.appendChild(lslLabel);
@@ -600,6 +611,7 @@
 
           studyInputs.push({
             columnNumber: columnNumber,
+            feature: featureInput,
             subgroup: subgroupInput,
             lsl: lslInput,
             usl: uslInput,
@@ -612,6 +624,7 @@
 
       function resetStudyInputs() {
         studyInputs.forEach(function (inputSet) {
+          inputSet.feature.value = '';
           inputSet.subgroup.value = '';
           inputSet.lsl.value = '';
           inputSet.usl.value = '';
@@ -627,6 +640,7 @@
       var translations = {
         pt: {
           reportTitleTemplate: 'Relatório de Capabilidade do Processo para {{feature}}',
+          reportTitleTemplateNoFeature: 'Relatório de Capabilidade do Processo',
           defaultFeatureName: 'Processo',
           valueAxisTitle: 'Valor',
           frequencyAxisTitle: 'Frequência',
@@ -640,6 +654,7 @@
         },
         en: {
           reportTitleTemplate: 'Process Capability Report for {{feature}}',
+          reportTitleTemplateNoFeature: 'Process Capability Report',
           defaultFeatureName: 'Process',
           valueAxisTitle: 'Value',
           frequencyAxisTitle: 'Frequency',
@@ -653,6 +668,7 @@
         },
         es: {
           reportTitleTemplate: 'Informe de Capacidad del Proceso para {{feature}}',
+          reportTitleTemplateNoFeature: 'Informe de Capacidad del Proceso',
           defaultFeatureName: 'Proceso',
           valueAxisTitle: 'Valor',
           frequencyAxisTitle: 'Frecuencia',
@@ -666,6 +682,7 @@
         },
         fr: {
           reportTitleTemplate: 'Rapport de Capabilité du procédé pour {{feature}}',
+          reportTitleTemplateNoFeature: 'Rapport de Capabilité du procédé',
           defaultFeatureName: 'Processus',
           valueAxisTitle: 'Valeur',
           frequencyAxisTitle: 'Fréquence',
@@ -679,6 +696,7 @@
         },
         de: {
           reportTitleTemplate: 'Prozessfähigkeitsbericht für {{feature}}',
+          reportTitleTemplateNoFeature: 'Prozessfähigkeitsbericht',
           defaultFeatureName: 'Prozess',
           valueAxisTitle: 'Wert',
           frequencyAxisTitle: 'Häufigkeit',
@@ -692,6 +710,7 @@
         },
         zh: {
           reportTitleTemplate: '过程能力报告（{{feature}}）',
+          reportTitleTemplateNoFeature: '过程能力报告',
           defaultFeatureName: '过程',
           valueAxisTitle: '数值',
           frequencyAxisTitle: '频率',
@@ -705,6 +724,7 @@
         },
         ja: {
           reportTitleTemplate: '工程能力レポート（{{feature}}）',
+          reportTitleTemplateNoFeature: '工程能力レポート',
           defaultFeatureName: '工程',
           valueAxisTitle: '値',
           frequencyAxisTitle: '頻度',
@@ -718,6 +738,7 @@
         },
         ko: {
           reportTitleTemplate: '공정능력 보고서 ({{feature}})',
+          reportTitleTemplateNoFeature: '공정능력 보고서',
           defaultFeatureName: '공정',
           valueAxisTitle: '값',
           frequencyAxisTitle: '빈도',
@@ -731,6 +752,7 @@
         },
         it: {
           reportTitleTemplate: 'Report di capacità di processo per {{feature}}',
+          reportTitleTemplateNoFeature: 'Report di capacità di processo',
           defaultFeatureName: 'Processo',
           valueAxisTitle: 'Valore',
           frequencyAxisTitle: 'Frequenza',
@@ -755,7 +777,12 @@
 
       function formatReportTitle(lang, featureName) {
         var template = translate(lang, 'reportTitleTemplate');
-        return template.replace('{{feature}}', featureName);
+        var trimmedFeature = (featureName || '').trim();
+        if (!trimmedFeature) {
+          var fallback = translate(lang, 'reportTitleTemplateNoFeature');
+          return fallback || template.replace(' {{feature}}', '').replace('{{feature}}', '');
+        }
+        return template.replace('{{feature}}', trimmedFeature);
       }
 
       function getResultLanguage(result) {
@@ -782,11 +809,12 @@
 
         for (var i = 0; i < studyInputs.length; i++) {
           var set = studyInputs[i];
-          var columnLabel = 'coluna ' + set.columnNumber;
+          var columnLabel = 'estudo ' + set.columnNumber;
           var lsl = set.lsl.value;
           var usl = set.usl.value;
           var subgroup = set.subgroup.value;
           var values = set.values.value;
+          var feature = set.feature.value;
 
           var hasContent =
             (lsl && lsl.trim() !== '') ||
@@ -808,7 +836,7 @@
           }
 
           try {
-            var featureName = 'Estudo ' + set.columnNumber;
+            var featureName = (feature || '').trim();
             var result = processAndCalculate(featureName, values, lsl, usl, subgroup);
             result.reportLanguage = reportLanguage;
             preparedResults.push(result);
@@ -823,7 +851,7 @@
         if (!hasAnyFilled) {
           statusEl.textContent = '';
           button.disabled = false;
-          alert('Preencha pelo menos uma coluna para calcular.');
+          alert('Preencha pelo menos um estudo para calcular.');
           return;
         }
 
@@ -863,7 +891,7 @@
         header.className = 'result-card__header';
 
         var title = document.createElement('h2');
-        var featureName = result.featureName || translate(lang, 'defaultFeatureName');
+        var featureName = (result.featureName || '').trim();
         title.textContent = formatReportTitle(lang, featureName);
 
         var deleteBtn = document.createElement('button');
