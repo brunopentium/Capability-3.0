@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>Análise de Capabilidade do Processo</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <style>
       :root {
@@ -384,7 +385,7 @@
     <main>
       <section class="card">
         <p class="helper-text">
-          Preencha até 4 estudos simultaneamente. Os campos vazios são ignorados.
+          Preencha até 8 estudos simultaneamente. Os campos vazios são ignorados.
           Caso um estudo tenha algum preenchimento incompleto, um aviso exibirá em
           qual estudo está o problema.
         </p>
@@ -406,6 +407,19 @@
           </div>
           <div class="form-footer__action">
             <button id="calcBtn" onclick="handleCalculate()">Calcular Capabilidade</button>
+            <button type="button" id="exportBtn" onclick="exportStudiesToExcel()">
+              Exportar estudos
+            </button>
+            <button type="button" id="importBtn" onclick="triggerImportStudies()">
+              Importar estudos
+            </button>
+            <input
+              type="file"
+              id="importStudiesFile"
+              accept=".xlsx,.xls"
+              style="display: none;"
+              onchange="handleImportStudies(event)"
+            />
             <p id="status" style="text-align:center; margin: 0; font-weight:600;"></p>
           </div>
         </div>
@@ -429,8 +443,17 @@
       //   CÁLCULO ESTATÍSTICO
       // =========================
 
-      var STUDY_COLUMN_COUNT = 4;
+      var STUDY_COLUMN_COUNT = 8;
       var studyInputs = [];
+      var EXPORT_HEADERS = [
+        'Estudo',
+        'Caracteristica',
+        'Subgrupo',
+        'LSL',
+        'USL',
+        'Valores',
+        'IdiomaRelatorio'
+      ];
 
       function processAndCalculate(featureName, rawDataText, lsl, usl, subgroupSize) {
         var data = rawDataText
@@ -664,6 +687,167 @@
           inputSet.usl.value = '';
           inputSet.values.value = '';
         });
+      }
+
+      function clearCalculatedResultsOnly() {
+        var collection = document.getElementById('resultsCollection');
+        collection.innerHTML = '';
+        resultEntries = [];
+        document.getElementById('resultsSection').style.display = 'none';
+        updateActionButtons();
+      }
+
+      function hasAnyInputData() {
+        for (var i = 0; i < studyInputs.length; i++) {
+          var set = studyInputs[i];
+          if (
+            set.feature.value.trim() ||
+            set.subgroup.value.trim() ||
+            set.lsl.value.trim() ||
+            set.usl.value.trim() ||
+            set.values.value.trim()
+          ) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function collectStudiesForExport() {
+        return studyInputs.map(function (set) {
+          return {
+            estudo: set.columnNumber,
+            caracteristica: set.feature.value.trim(),
+            subgrupo: set.subgroup.value.trim(),
+            lsl: set.lsl.value.trim(),
+            usl: set.usl.value.trim(),
+            valores: set.values.value.trim()
+          };
+        });
+      }
+
+      function exportStudiesToExcel() {
+        if (typeof XLSX === 'undefined') {
+          alert('Não foi possível exportar: biblioteca XLSX indisponível.');
+          return;
+        }
+
+        var studies = collectStudiesForExport();
+        var hasContent = studies.some(function (study) {
+          return (
+            study.caracteristica ||
+            study.subgrupo ||
+            study.lsl ||
+            study.usl ||
+            study.valores
+          );
+        });
+
+        if (!hasContent) {
+          alert('Não há dados preenchidos para exportar.');
+          return;
+        }
+
+        var reportLanguage = document.getElementById('reportLanguage').value || 'pt';
+        var rows = [EXPORT_HEADERS];
+        studies.forEach(function (study) {
+          rows.push([
+            study.estudo,
+            study.caracteristica,
+            study.subgrupo,
+            study.lsl,
+            study.usl,
+            study.valores,
+            reportLanguage
+          ]);
+        });
+
+        var worksheet = XLSX.utils.aoa_to_sheet(rows);
+        var workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Estudos');
+
+        var dateStamp = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, 'estudos-capabilidade-' + dateStamp + '.xlsx');
+      }
+
+      function triggerImportStudies() {
+        var input = document.getElementById('importStudiesFile');
+        if (!input) return;
+        input.value = '';
+        input.click();
+      }
+
+      function handleImportStudies(event) {
+        var file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file) return;
+        if (typeof XLSX === 'undefined') {
+          alert('Não foi possível importar: biblioteca XLSX indisponível.');
+          return;
+        }
+
+        var hasCurrentData = hasAnyInputData() || resultEntries.length > 0;
+        if (hasCurrentData) {
+          var shouldOverwrite = window.confirm(
+            'Já existem dados na tela. Deseja substituir pelos dados do arquivo importado?'
+          );
+          if (!shouldOverwrite) {
+            return;
+          }
+        }
+
+        var reader = new FileReader();
+        reader.onload = function (loadEvent) {
+          try {
+            var arrayBuffer = loadEvent.target.result;
+            var workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            var firstSheetName = workbook.SheetNames[0];
+            if (!firstSheetName) {
+              throw new Error('A planilha está vazia.');
+            }
+
+            var sheet = workbook.Sheets[firstSheetName];
+            var dataRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+            if (!dataRows.length) {
+              throw new Error('Nenhuma linha de dados foi encontrada.');
+            }
+
+            resetStudyInputs();
+            clearCalculatedResultsOnly();
+
+            for (var i = 0; i < Math.min(dataRows.length, studyInputs.length); i++) {
+              var row = dataRows[i];
+              var target = studyInputs[i];
+              target.feature.value = (row.Caracteristica || '').toString().trim();
+              target.subgroup.value = (row.Subgrupo || '').toString().trim();
+              target.lsl.value = (row.LSL || '').toString().trim();
+              target.usl.value = (row.USL || '').toString().trim();
+              target.values.value = (row.Valores || '').toString().trim();
+            }
+
+            var langFromFile = (dataRows[0].IdiomaRelatorio || '').toString().trim();
+            if (translations[langFromFile]) {
+              document.getElementById('reportLanguage').value = langFromFile;
+            }
+
+            if (dataRows.length > studyInputs.length) {
+              alert(
+                'Importação concluída com sucesso. Apenas os primeiros ' +
+                  studyInputs.length +
+                  ' estudos foram carregados.'
+              );
+            } else {
+              alert('Importação concluída com sucesso.');
+            }
+          } catch (error) {
+            alert('Falha ao importar arquivo: ' + error.message);
+          }
+        };
+
+        reader.onerror = function () {
+          alert('Falha ao ler o arquivo selecionado.');
+        };
+
+        reader.readAsArrayBuffer(file);
       }
 
       // =========================
@@ -1384,15 +1568,9 @@
       }
 
       function clearResults() {
-        var collection = document.getElementById('resultsCollection');
-        collection.innerHTML = '';
-        resultEntries = [];
-
-        document.getElementById('resultsSection').style.display = 'none';
+        clearCalculatedResultsOnly();
         document.getElementById('status').textContent = '';
         resetStudyInputs();
-
-        updateActionButtons();
       }
 
       function removeResult(entry) {
