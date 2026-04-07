@@ -130,11 +130,14 @@
         flex-direction: column;
         gap: 32px;
       }
+      .result-entry {
+        position: relative;
+      }
       .result-card {
-        padding-top: 16px;
+        padding-top: 22px;
         display: flex;
         flex-direction: column;
-        gap: 28px;
+        gap: 20px;
       }
       .result-card h2 {
         text-align: center;
@@ -153,22 +156,26 @@
       .stats {
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 12px;
+        background: #f8fbff;
+        border-radius: 16px;
+        border: 1px solid rgba(13, 71, 161, 0.08);
+        padding: 12px;
       }
       .metric-highlight {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
       }
       .metric-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+        gap: 8px;
       }
       .metric-card {
-        background: #f8fbff;
-        border-radius: 16px;
-        padding: 18px 20px;
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 10px 12px;
         border: 1px solid rgba(13, 71, 161, 0.07);
         position: relative;
         overflow: hidden;
@@ -182,27 +189,28 @@
         pointer-events: none;
       }
       .metric-card--focus {
-        background: linear-gradient(135deg, rgba(13, 71, 161, 0.92), rgba(33, 150, 243, 0.8));
-        color: #fff;
-        border: none;
-        box-shadow: 0 18px 35px rgba(13, 71, 161, 0.3);
+        background: #e8f0ff;
+        color: var(--primary-dark);
+        border: 1px solid rgba(13, 71, 161, 0.16);
+        box-shadow: none;
       }
       .metric-card--focus.metric-card--calm {
-        background: linear-gradient(135deg, rgba(25, 118, 210, 0.9), rgba(0, 230, 118, 0.8));
+        background: #e8fbf4;
+        border: 1px solid rgba(0, 150, 136, 0.22);
       }
       .metric-label {
-        font-size: 0.9rem;
+        font-size: 0.78rem;
         font-weight: 600;
         color: inherit;
       }
       .metric-value {
         display: block;
-        font-size: 2rem;
+        font-size: 1.28rem;
         font-weight: 700;
-        margin-top: 6px;
+        margin-top: 4px;
       }
       .metric-card--subtle .metric-value {
-        font-size: 1.4rem;
+        font-size: 1.05rem;
         color: var(--primary);
       }
       .metric-card--subtle .metric-label {
@@ -261,23 +269,27 @@
 
       .result-card__header {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         gap: 12px;
         flex-wrap: wrap;
       }
 
-      .ghost-button {
+      .result-entry__delete {
         background: transparent;
         color: var(--primary);
         border: 1px solid rgba(13, 71, 161, 0.25);
         box-shadow: none;
-        padding: 10px 14px;
+        padding: 8px 12px;
         width: auto;
         border-radius: 10px;
+        font-size: 0.9rem;
+        position: absolute;
+        left: -132px;
+        top: 24px;
       }
 
-      .ghost-button:hover {
+      .result-entry__delete:hover {
         transform: none;
         background: rgba(13, 71, 161, 0.06);
         box-shadow: none;
@@ -305,6 +317,15 @@
           height: 580px;
         }
       }
+      @media (max-width: 1180px) {
+        .result-entry__delete {
+          position: static;
+          margin: 0 0 10px;
+        }
+        .metric-highlight {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
 @media print {
   /* Tira fundo degradê e deixa branco */
   body {
@@ -330,7 +351,7 @@
     page-break-after: always;
   }
 
-  .result-card__header .ghost-button {
+  .result-entry__delete {
     display: none !important;
   }
 
@@ -869,7 +890,7 @@
         section.style.display = 'block';
 
         var entry = createResultCard(result);
-        collection.appendChild(entry.card);
+        collection.appendChild(entry.wrapper);
         resultEntries.push(entry);
         entry.deleteButton.addEventListener('click', function () {
           removeResult(entry);
@@ -884,6 +905,14 @@
 
       function createResultCard(result) {
         var lang = getResultLanguage(result);
+        var wrapper = document.createElement('div');
+        wrapper.className = 'result-entry';
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'result-entry__delete';
+        deleteBtn.textContent = 'Excluir estudo';
+
         var card = document.createElement('section');
         card.className = 'card result-card';
 
@@ -894,13 +923,7 @@
         var featureName = (result.featureName || '').trim();
         title.textContent = formatReportTitle(lang, featureName);
 
-        var deleteBtn = document.createElement('button');
-        deleteBtn.type = 'button';
-        deleteBtn.className = 'ghost-button';
-        deleteBtn.textContent = 'Excluir estudo';
-
         header.appendChild(title);
-        header.appendChild(deleteBtn);
 
         var chartContainer = document.createElement('div');
         chartContainer.className = 'chart-container';
@@ -912,8 +935,11 @@
         card.appendChild(header);
         card.appendChild(chartContainer);
         card.appendChild(statsContainer);
+        wrapper.appendChild(deleteBtn);
+        wrapper.appendChild(card);
 
         return {
+          wrapper: wrapper,
           card: card,
           chartContainer: chartContainer,
           statsContainer: statsContainer,
@@ -1359,8 +1385,9 @@
 
       function removeResult(entry) {
         var collection = document.getElementById('resultsCollection');
-        if (entry && entry.card && collection.contains(entry.card)) {
-          collection.removeChild(entry.card);
+        var nodeToRemove = entry && entry.wrapper ? entry.wrapper : entry && entry.card;
+        if (nodeToRemove && collection.contains(nodeToRemove)) {
+          collection.removeChild(nodeToRemove);
         }
 
         var idx = resultEntries.indexOf(entry);
