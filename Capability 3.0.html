@@ -162,6 +162,8 @@
         border: 1px solid rgba(13, 71, 161, 0.08);
         border-radius: 14px;
         padding: 12px;
+        width: calc(100% - 72px);
+        margin-left: auto;
       }
       .metric-highlight {
         display: grid;
@@ -292,7 +294,8 @@
       .ghost-button--outside {
         position: absolute;
         left: 0;
-        top: 64px;
+        top: 50%;
+        transform: translateY(-50%);
         z-index: 2;
       }
 
@@ -325,6 +328,11 @@
         }
         .ghost-button--outside {
           top: 0;
+          transform: none;
+        }
+        .stats {
+          width: 100%;
+          margin-left: 0;
         }
       }
 @media print {
