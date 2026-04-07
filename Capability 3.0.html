@@ -131,15 +131,19 @@
         gap: 32px;
       }
       .result-card {
-        padding-top: 16px;
+        padding-top: 18px;
         display: flex;
         flex-direction: column;
-        gap: 28px;
+        gap: 20px;
+      }
+      .result-card-shell {
+        position: relative;
+        padding-left: 120px;
       }
       .result-card h2 {
         text-align: center;
         width: 100%;
-        margin: 0 0 8px;
+        margin: 0;
         font-size: 1.4rem;
         color: var(--primary);
       }
@@ -153,23 +157,27 @@
       .stats {
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 12px;
+        background: #f8fbff;
+        border: 1px solid rgba(13, 71, 161, 0.08);
+        border-radius: 14px;
+        padding: 12px;
       }
       .metric-highlight {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
       }
       .metric-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 8px;
       }
       .metric-card {
-        background: #f8fbff;
-        border-radius: 16px;
-        padding: 18px 20px;
-        border: 1px solid rgba(13, 71, 161, 0.07);
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(13, 71, 161, 0.1);
         position: relative;
         overflow: hidden;
       }
@@ -182,27 +190,26 @@
         pointer-events: none;
       }
       .metric-card--focus {
-        background: linear-gradient(135deg, rgba(13, 71, 161, 0.92), rgba(33, 150, 243, 0.8));
-        color: #fff;
-        border: none;
-        box-shadow: 0 18px 35px rgba(13, 71, 161, 0.3);
+        background: linear-gradient(135deg, rgba(13, 71, 161, 0.16), rgba(33, 150, 243, 0.12));
+        color: #0b3d93;
+        border-color: rgba(13, 71, 161, 0.18);
       }
       .metric-card--focus.metric-card--calm {
-        background: linear-gradient(135deg, rgba(25, 118, 210, 0.9), rgba(0, 230, 118, 0.8));
+        background: linear-gradient(135deg, rgba(25, 118, 210, 0.14), rgba(0, 230, 118, 0.12));
       }
       .metric-label {
-        font-size: 0.9rem;
+        font-size: 0.82rem;
         font-weight: 600;
         color: inherit;
       }
       .metric-value {
         display: block;
-        font-size: 2rem;
+        font-size: 1.55rem;
         font-weight: 700;
-        margin-top: 6px;
+        margin-top: 3px;
       }
       .metric-card--subtle .metric-value {
-        font-size: 1.4rem;
+        font-size: 1.02rem;
         color: var(--primary);
       }
       .metric-card--subtle .metric-label {
@@ -261,7 +268,7 @@
 
       .result-card__header {
         display: flex;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
         gap: 12px;
         flex-wrap: wrap;
@@ -281,6 +288,12 @@
         transform: none;
         background: rgba(13, 71, 161, 0.06);
         box-shadow: none;
+      }
+      .ghost-button--outside {
+        position: absolute;
+        left: 0;
+        top: 64px;
+        z-index: 2;
       }
 
       /* Tooltip simples para o gráfico */
@@ -303,6 +316,15 @@
         }
         .chart-container {
           height: 580px;
+        }
+      }
+      @media (max-width: 900px) {
+        .result-card-shell {
+          padding-left: 0;
+          padding-top: 52px;
+        }
+        .ghost-button--outside {
+          top: 0;
         }
       }
 @media print {
@@ -330,8 +352,12 @@
     page-break-after: always;
   }
 
-  .result-card__header .ghost-button {
+  .result-card__header .ghost-button,
+  .ghost-button--outside {
     display: none !important;
+  }
+  .result-card-shell {
+    padding-left: 0 !important;
   }
 
   /* Remove sombras, bordas fortes, etc, pra economizar tinta */
@@ -884,6 +910,9 @@
 
       function createResultCard(result) {
         var lang = getResultLanguage(result);
+        var shell = document.createElement('div');
+        shell.className = 'result-card-shell';
+
         var card = document.createElement('section');
         card.className = 'card result-card';
 
@@ -896,11 +925,10 @@
 
         var deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
-        deleteBtn.className = 'ghost-button';
+        deleteBtn.className = 'ghost-button ghost-button--outside';
         deleteBtn.textContent = 'Excluir estudo';
 
         header.appendChild(title);
-        header.appendChild(deleteBtn);
 
         var chartContainer = document.createElement('div');
         chartContainer.className = 'chart-container';
@@ -912,9 +940,11 @@
         card.appendChild(header);
         card.appendChild(chartContainer);
         card.appendChild(statsContainer);
+        shell.appendChild(deleteBtn);
+        shell.appendChild(card);
 
         return {
-          card: card,
+          card: shell,
           chartContainer: chartContainer,
           statsContainer: statsContainer,
           deleteButton: deleteBtn
