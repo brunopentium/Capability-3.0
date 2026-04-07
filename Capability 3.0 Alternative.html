@@ -1,0 +1,1822 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Análise de Capabilidade do Processo</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <style>
+      :root {
+        --primary: #0d47a1;
+        --primary-dark: #072f6b;
+        --secondary: #1de9b6;
+        --bg: #f4f6fb;
+        --card-bg: #ffffff;
+        --muted: #7a869a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at top, #f2f7ff 0%, #eef2ff 45%, #e5ebff 100%);
+        color: #0f1c3f;
+        font-size: 16px;
+      }
+      header {
+        background: linear-gradient(135deg, #0d47a1, #1a237e, #311b92);
+        color: #fff;
+        padding: 40px 20px 60px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      header::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.15), transparent 45%),
+          radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.12), transparent 55%);
+        pointer-events: none;
+      }
+      header h1 {
+        position: relative;
+        margin: 0;
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+      }
+      main {
+        width: min(92vw, 1200px);
+        margin: -40px auto 48px;
+        padding: 0 20px 40px;
+        position: relative;
+      }
+      .card {
+        background: var(--card-bg);
+        border-radius: 24px;
+        box-shadow: 0 25px 80px rgba(13, 71, 161, 0.12);
+        padding: 32px;
+        margin-bottom: 28px;
+        position: relative;
+        overflow: hidden;
+      }
+      .card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        pointer-events: none;
+        border: 1px solid rgba(13, 71, 161, 0.08);
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      input[type="text"],
+      input[type="number"],
+      select,
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #cfd8dc;
+        font-size: 14px;
+        margin-bottom: 16px;
+        box-sizing: border-box;
+      }
+      textarea {
+        min-height: 160px;
+        resize: vertical;
+      }
+      button {
+        background: linear-gradient(120deg, var(--primary), var(--primary-dark));
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 16px 24px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+        box-shadow: 0 15px 30px rgba(7, 47, 107, 0.25);
+      }
+      button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 35px rgba(7, 47, 107, 0.25);
+      }
+      button:disabled {
+        background: #90a4ae;
+        cursor: not-allowed;
+        box-shadow: none;
+        opacity: 0.65;
+      }
+      #resultsSection {
+        display: none;
+        margin-top: 32px;
+      }
+      .results-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+      .results-actions button {
+        width: 100%;
+      }
+      .results-collection {
+        display: flex;
+        flex-direction: column;
+        gap: 32px;
+      }
+      .result-card {
+        padding-top: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .result-card-shell {
+        position: relative;
+        padding-left: 120px;
+      }
+      .result-card h2 {
+        text-align: center;
+        width: 100%;
+        margin: 0;
+        font-size: 1.4rem;
+        color: var(--primary);
+      }
+      .chart-container {
+        width: 100%;
+        height: 520px;
+        border-radius: 18px;
+        background: #f8fbff;
+        padding: 12px;
+      }
+      .stats {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: #f8fbff;
+        border: 1px solid rgba(13, 71, 161, 0.08);
+        border-radius: 14px;
+        padding: 12px;
+        width: calc(100% - 72px);
+        margin-left: auto;
+      }
+      .metric-highlight {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+      }
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 8px;
+      }
+      .metric-card {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(13, 71, 161, 0.1);
+        position: relative;
+        overflow: hidden;
+      }
+      .metric-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        opacity: 0.25;
+        background: radial-gradient(circle at top right, rgba(255, 255, 255, 0.7), transparent 55%);
+        pointer-events: none;
+      }
+      .metric-card--focus {
+        background: linear-gradient(135deg, rgba(13, 71, 161, 0.16), rgba(33, 150, 243, 0.12));
+        color: #0b3d93;
+        border-color: rgba(13, 71, 161, 0.18);
+      }
+      .metric-card--focus.metric-card--calm {
+        background: linear-gradient(135deg, rgba(25, 118, 210, 0.14), rgba(0, 230, 118, 0.12));
+      }
+      .metric-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: inherit;
+      }
+      .metric-value {
+        display: block;
+        font-size: 1.55rem;
+        font-weight: 700;
+        margin-top: 3px;
+      }
+      .metric-card--subtle .metric-value {
+        font-size: 1.02rem;
+        color: var(--primary);
+      }
+      .metric-card--subtle .metric-label {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .input-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+      }
+
+      .helper-text {
+        margin-bottom: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .study-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        width: 100%;
+        margin-top: 16px;
+      }
+
+      .study-column {
+        background: #f8fbff;
+        border-radius: 14px;
+        border: 1px solid rgba(13, 71, 161, 0.08);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .study-column__title {
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 6px;
+      }
+      .values-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+      .values-header label {
+        margin-bottom: 0;
+      }
+      .mini-button {
+        width: auto;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        box-shadow: none;
+      }
+
+      .form-footer {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        align-items: end;
+        margin-top: 18px;
+      }
+
+      .form-footer__action {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .result-card__header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .ghost-button {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid rgba(13, 71, 161, 0.25);
+        box-shadow: none;
+        padding: 10px 14px;
+        width: auto;
+        border-radius: 10px;
+      }
+
+      .ghost-button:hover {
+        transform: none;
+        background: rgba(13, 71, 161, 0.06);
+        box-shadow: none;
+      }
+      .ghost-button--outside {
+        position: absolute;
+        left: -20px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+      }
+
+      /* Tooltip simples para o gráfico */
+      .chart-tooltip {
+        position: absolute;
+        pointer-events: none;
+        background: rgba(33, 33, 33, 0.9);
+        color: #fff;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        white-space: pre;
+        z-index: 10;
+        transform: translate(-50%, -120%);
+      }
+
+      @media (min-width: 1024px) {
+        main {
+          padding: 0 32px 72px;
+        }
+        .chart-container {
+          height: 580px;
+        }
+      }
+      @media (max-width: 900px) {
+        .result-card-shell {
+          padding-left: 0;
+          padding-top: 52px;
+        }
+        .ghost-button--outside {
+          top: 0;
+          transform: none;
+        }
+        .stats {
+          width: 100%;
+          margin-left: 0;
+        }
+      }
+@media print {
+  /* Tira fundo degradê e deixa branco */
+  body {
+    background: #ffffff !important;
+    margin: 18mm 12mm 16mm;
+    padding: 0;
+  }
+
+  /* Esconde cabeçalho e área de inputs na impressão */
+  header,
+  main > .card:first-of-type,
+  #clearBtn {
+    display: none !important;
+  }
+
+  /* Garante que só a seção de resultados apareça */
+  #resultsSection {
+    display: block !important;
+  }
+
+  /* Cada estudo em página separada */
+  .result-card {
+    page-break-after: always;
+  }
+
+  .result-card__header .ghost-button,
+  .ghost-button--outside {
+    display: none !important;
+  }
+  .result-card-shell {
+    padding-left: 0 !important;
+  }
+
+  /* Remove sombras, bordas fortes, etc, pra economizar tinta */
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
+}
+
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Análise de Capabilidade do Processo</h1>
+    </header>
+    <main>
+      <section class="card">
+        <p class="helper-text">
+          Preencha até 8 estudos simultaneamente. Os campos vazios são ignorados.
+          Caso um estudo tenha algum preenchimento incompleto, um aviso exibirá em
+          qual estudo está o problema.
+        </p>
+        <div id="studyGrid" class="study-grid"></div>
+        <div class="form-footer">
+          <div>
+            <label for="reportLanguage">Idioma do relatório</label>
+            <select id="reportLanguage">
+              <option value="pt">Português</option>
+              <option value="en">Inglês</option>
+              <option value="es">Espanhol</option>
+              <option value="fr">Francês</option>
+              <option value="de">Alemão</option>
+              <option value="zh">Chinês</option>
+              <option value="ja">Japonês</option>
+              <option value="ko">Coreano</option>
+              <option value="it">Italiano</option>
+            </select>
+          </div>
+          <div class="form-footer__action">
+            <button id="calcBtn" onclick="handleCalculate()">Calcular Capabilidade</button>
+            <button type="button" id="exportBtn" onclick="exportStudiesToExcel()">
+              Exportar estudos
+            </button>
+            <button type="button" id="importBtn" onclick="triggerImportStudies()">
+              Importar estudos
+            </button>
+            <input
+              type="file"
+              id="importStudiesFile"
+              accept=".xlsx,.xls"
+              style="display: none;"
+              onchange="handleImportStudies(event)"
+            />
+            <p id="status" style="text-align:center; margin: 0; font-weight:600;"></p>
+          </div>
+        </div>
+      </section>
+
+      <section id="resultsSection">
+        <div class="results-actions">
+          <button id="clearBtn" onclick="clearResults()" disabled>
+            Limpar estudos
+          </button>
+          <button id="reportBtn" onclick="generateReport()" disabled>
+            Gerar relatório
+          </button>
+        </div>
+        <div id="resultsCollection" class="results-collection"></div>
+      </section>
+    </main>
+
+    <script>
+      // =========================
+      //   CÁLCULO ESTATÍSTICO
+      // =========================
+
+      var STUDY_COLUMN_COUNT = 8;
+      var studyInputs = [];
+      var EXPORT_HEADERS = [
+        'Estudo',
+        'Caracteristica',
+        'Subgrupo',
+        'LSL',
+        'USL',
+        'ValorRealMin',
+        'ValorRealMax',
+        'QuantidadeValores',
+        'Valores',
+        'IdiomaRelatorio'
+      ];
+
+      function processAndCalculate(featureName, rawDataText, lsl, usl, subgroupSize) {
+        var data = rawDataText
+          .split(/\r?\n/)
+          .map(function (line) {
+            return parseFloat(line.toString().trim().replace(',', '.'));
+          })
+          .filter(function (value) {
+            return !isNaN(value);
+          });
+
+        if (data.length === 0) {
+          throw new Error('Nenhum valor numérico válido foi informado.');
+        }
+
+        var lslText = lsl != null ? lsl.toString().trim() : '';
+        var uslText = usl != null ? usl.toString().trim() : '';
+
+        var parsedLsl = lslText === '' ? null : parseFloat(lslText);
+        var parsedUsl = uslText === '' ? null : parseFloat(uslText);
+
+        if (lslText !== '' && isNaN(parsedLsl)) {
+          throw new Error('Informe um LSL numérico válido ou deixe em branco.');
+        }
+        if (uslText !== '' && isNaN(parsedUsl)) {
+          throw new Error('Informe um USL numérico válido ou deixe em branco.');
+        }
+
+        if (parsedLsl === null && parsedUsl === null) {
+          throw new Error('Informe pelo menos um limite (LSL ou USL).');
+        }
+
+        lsl = parsedLsl;
+        usl = parsedUsl;
+        subgroupSize = parseInt(subgroupSize, 10);
+
+        if (isNaN(subgroupSize) || subgroupSize < 1) {
+          throw new Error('Informe um tamanho de subgrupo inteiro maior ou igual a 1.');
+        }
+
+        var stats = calculateCapability(data, lsl, usl, subgroupSize);
+        stats.featureName = featureName;
+        stats.data = data;
+        stats.lsl = lsl;
+        stats.usl = usl;
+        stats.subgroupSize = subgroupSize;
+
+        return stats;
+      }
+
+      function calculateCapability(data, lsl, usl, subgroupSize) {
+        var n = data.length;
+        var mean =
+          data.reduce(function (sum, value) {
+            return sum + value;
+          }, 0) / n;
+
+        var sigmaOverall = Math.sqrt(
+          data.reduce(function (sum, value) {
+            return sum + Math.pow(value - mean, 2);
+          }, 0) /
+            (n - 1)
+        );
+
+        var sigmaWithin = calculateWithinSigma(data, subgroupSize);
+
+        if (sigmaOverall === 0) sigmaOverall = Number.EPSILON;
+        if (sigmaWithin === 0) sigmaWithin = Number.EPSILON;
+
+        var hasLsl = Number.isFinite(lsl);
+        var hasUsl = Number.isFinite(usl);
+
+        var cp = hasLsl && hasUsl ? (usl - lsl) / (6 * sigmaWithin) : null;
+        var cpkUpper = hasUsl ? (usl - mean) / (3 * sigmaWithin) : Infinity;
+        var cpkLower = hasLsl ? (mean - lsl) / (3 * sigmaWithin) : Infinity;
+        var cpk = Math.min(cpkUpper, cpkLower);
+        cpk = Number.isFinite(cpk) ? cpk : null;
+
+        var pp = hasLsl && hasUsl ? (usl - lsl) / (6 * sigmaOverall) : null;
+        var ppkUpper = hasUsl ? (usl - mean) / (3 * sigmaOverall) : Infinity;
+        var ppkLower = hasLsl ? (mean - lsl) / (3 * sigmaOverall) : Infinity;
+        var ppk = Math.min(ppkUpper, ppkLower);
+        ppk = Number.isFinite(ppk) ? ppk : null;
+
+        return {
+          n: n,
+          mean: mean,
+          sigmaOverall: sigmaOverall,
+          sigmaWithin: sigmaWithin,
+          cp: cp,
+          cpk: cpk,
+          pp: pp,
+          ppk: ppk
+        };
+      }
+
+      function calculateWithinSigma(data, subgroupSize) {
+        if (subgroupSize === 1) {
+          if (data.length < 2) {
+            return 0;
+          }
+          var movingRanges = [];
+          for (var i = 1; i < data.length; i++) {
+            movingRanges.push(Math.abs(data[i] - data[i - 1]));
+          }
+          var mrBar =
+            movingRanges.reduce(function (sum, value) {
+              return sum + value;
+            }, 0) / movingRanges.length;
+          var d2 = 1.128;
+          return mrBar / d2;
+        }
+
+        var groups = [];
+        for (var j = 0; j + subgroupSize <= data.length; j += subgroupSize) {
+          groups.push(data.slice(j, j + subgroupSize));
+        }
+        if (groups.length === 0) return 0;
+
+        var numerator = 0;
+        var denominator = 0;
+
+        groups.forEach(function (group) {
+          var gMean =
+            group.reduce(function (sum, value) {
+              return sum + value;
+            }, 0) / group.length;
+          var variance = group.reduce(function (sum, value) {
+            return sum + Math.pow(value - gMean, 2);
+          }, 0);
+          numerator += variance;
+          denominator += group.length - 1;
+        });
+
+        if (denominator === 0) return 0;
+        return Math.sqrt(numerator / denominator);
+      }
+
+      function buildStudyGrid() {
+        var container = document.getElementById('studyGrid');
+        if (!container) return;
+
+        container.innerHTML = '';
+        studyInputs = [];
+
+        for (var i = 0; i < STUDY_COLUMN_COUNT; i++) {
+          var columnNumber = i + 1;
+          var column = document.createElement('div');
+          column.className = 'study-column';
+
+          var title = document.createElement('div');
+          title.className = 'study-column__title';
+          title.textContent = 'Estudo ' + columnNumber;
+          column.appendChild(title);
+
+          var featureId = 'feature-' + columnNumber;
+          var subgroupId = 'subgroup-' + columnNumber;
+          var lslId = 'lsl-' + columnNumber;
+          var uslId = 'usl-' + columnNumber;
+          var realMinId = 'real-min-' + columnNumber;
+          var realMaxId = 'real-max-' + columnNumber;
+          var quantityId = 'quantity-' + columnNumber;
+          var valuesId = 'values-' + columnNumber;
+
+          var featureLabel = document.createElement('label');
+          featureLabel.setAttribute('for', featureId);
+          featureLabel.textContent = 'Característica';
+          var featureInput = document.createElement('input');
+          featureInput.type = 'text';
+          featureInput.id = featureId;
+          featureInput.placeholder = 'Informe a característica do estudo';
+
+          var subgroupLabel = document.createElement('label');
+          subgroupLabel.setAttribute('for', subgroupId);
+          subgroupLabel.textContent = 'Tamanho do subgrupo';
+          var subgroupInput = document.createElement('input');
+          subgroupInput.type = 'number';
+          subgroupInput.min = '1';
+          subgroupInput.placeholder = '5';
+          subgroupInput.id = subgroupId;
+
+          var lslLabel = document.createElement('label');
+          lslLabel.setAttribute('for', lslId);
+          lslLabel.textContent = 'LSL (Limite Inferior)';
+          var lslInput = document.createElement('input');
+          lslInput.type = 'number';
+          lslInput.step = 'any';
+          lslInput.id = lslId;
+
+          var uslLabel = document.createElement('label');
+          uslLabel.setAttribute('for', uslId);
+          uslLabel.textContent = 'USL (Limite Superior)';
+          var uslInput = document.createElement('input');
+          uslInput.type = 'number';
+          uslInput.step = 'any';
+          uslInput.id = uslId;
+
+          var realMinLabel = document.createElement('label');
+          realMinLabel.setAttribute('for', realMinId);
+          realMinLabel.textContent = 'Valor real mín';
+          var realMinInput = document.createElement('input');
+          realMinInput.type = 'number';
+          realMinInput.step = 'any';
+          realMinInput.id = realMinId;
+
+          var realMaxLabel = document.createElement('label');
+          realMaxLabel.setAttribute('for', realMaxId);
+          realMaxLabel.textContent = 'Valor real máx';
+          var realMaxInput = document.createElement('input');
+          realMaxInput.type = 'number';
+          realMaxInput.step = 'any';
+          realMaxInput.id = realMaxId;
+
+          var quantityLabel = document.createElement('label');
+          quantityLabel.setAttribute('for', quantityId);
+          quantityLabel.textContent = 'Quantidade de valores';
+          var quantityInput = document.createElement('input');
+          quantityInput.type = 'number';
+          quantityInput.min = '2';
+          quantityInput.step = '1';
+          quantityInput.id = quantityId;
+
+          var valuesHeader = document.createElement('div');
+          valuesHeader.className = 'values-header';
+          var valuesLabel = document.createElement('label');
+          valuesLabel.setAttribute('for', valuesId);
+          valuesLabel.textContent = 'Valores das medições (um valor por linha)';
+          var generateButton = document.createElement('button');
+          generateButton.type = 'button';
+          generateButton.className = 'mini-button';
+          generateButton.textContent = 'Gerar';
+          var valuesTextarea = document.createElement('textarea');
+          valuesTextarea.id = valuesId;
+          valuesTextarea.placeholder = 'Cole os valores aqui...';
+
+          attachGenerateButton(
+            generateButton,
+            valuesTextarea,
+            realMinInput,
+            realMaxInput,
+            quantityInput,
+            columnNumber
+          );
+
+          valuesHeader.appendChild(valuesLabel);
+          valuesHeader.appendChild(generateButton);
+
+          column.appendChild(featureLabel);
+          column.appendChild(featureInput);
+          column.appendChild(subgroupLabel);
+          column.appendChild(subgroupInput);
+          column.appendChild(lslLabel);
+          column.appendChild(lslInput);
+          column.appendChild(uslLabel);
+          column.appendChild(uslInput);
+          column.appendChild(realMinLabel);
+          column.appendChild(realMinInput);
+          column.appendChild(realMaxLabel);
+          column.appendChild(realMaxInput);
+          column.appendChild(quantityLabel);
+          column.appendChild(quantityInput);
+          column.appendChild(valuesHeader);
+          column.appendChild(valuesTextarea);
+
+          studyInputs.push({
+            columnNumber: columnNumber,
+            feature: featureInput,
+            subgroup: subgroupInput,
+            lsl: lslInput,
+            usl: uslInput,
+            realMin: realMinInput,
+            realMax: realMaxInput,
+            quantity: quantityInput,
+            values: valuesTextarea
+          });
+
+          container.appendChild(column);
+        }
+      }
+
+      function attachGenerateButton(
+        generateButton,
+        valuesTextarea,
+        realMinInput,
+        realMaxInput,
+        quantityInput,
+        columnNumber
+      ) {
+        generateButton.addEventListener('click', function () {
+          try {
+            valuesTextarea.value = generateValuesForStudy(
+              realMinInput.value,
+              realMaxInput.value,
+              quantityInput.value
+            );
+          } catch (error) {
+            alert('Não foi possível gerar valores para o estudo ' + columnNumber + ': ' + error.message);
+          }
+        });
+      }
+
+      function randomNormal() {
+        var u = 0;
+        var v = 0;
+        while (u === 0) u = Math.random();
+        while (v === 0) v = Math.random();
+        return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function generateValuesForStudy(realMinText, realMaxText, quantityText) {
+        var realMin = parseFloat((realMinText || '').toString().replace(',', '.'));
+        var realMax = parseFloat((realMaxText || '').toString().replace(',', '.'));
+        var quantity = parseInt(quantityText, 10);
+
+        if (!Number.isFinite(realMin) || !Number.isFinite(realMax)) {
+          throw new Error('Preencha valor real mín e valor real máx com números válidos.');
+        }
+        if (realMax <= realMin) {
+          throw new Error('O valor real máx deve ser maior que o valor real mín.');
+        }
+        if (!Number.isInteger(quantity) || quantity < 2) {
+          throw new Error('Informe uma quantidade de valores inteira e maior ou igual a 2.');
+        }
+
+        var mean = (realMin + realMax) / 2;
+        var sigma = (realMax - realMin) / 6;
+        var values = [];
+
+        for (var i = 0; i < quantity; i++) {
+          var candidate = mean + randomNormal() * sigma;
+          var clampedValue = clamp(candidate, realMin, realMax);
+          values.push(clampedValue.toFixed(4));
+        }
+
+        return values.join('\n');
+      }
+
+      function resetStudyInputs() {
+        studyInputs.forEach(function (inputSet) {
+          inputSet.feature.value = '';
+          inputSet.subgroup.value = '';
+          inputSet.lsl.value = '';
+          inputSet.usl.value = '';
+          inputSet.realMin.value = '';
+          inputSet.realMax.value = '';
+          inputSet.quantity.value = '';
+          inputSet.values.value = '';
+        });
+      }
+
+      function clearCalculatedResultsOnly() {
+        var collection = document.getElementById('resultsCollection');
+        collection.innerHTML = '';
+        resultEntries = [];
+        document.getElementById('resultsSection').style.display = 'none';
+        updateActionButtons();
+      }
+
+      function hasAnyInputData() {
+        for (var i = 0; i < studyInputs.length; i++) {
+          var set = studyInputs[i];
+          if (
+            set.feature.value.trim() ||
+            set.subgroup.value.trim() ||
+            set.lsl.value.trim() ||
+            set.usl.value.trim() ||
+            set.realMin.value.trim() ||
+            set.realMax.value.trim() ||
+            set.quantity.value.trim() ||
+            set.values.value.trim()
+          ) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function collectStudiesForExport() {
+        return studyInputs.map(function (set) {
+          return {
+            estudo: set.columnNumber,
+            caracteristica: set.feature.value.trim(),
+            subgrupo: set.subgroup.value.trim(),
+            lsl: set.lsl.value.trim(),
+            usl: set.usl.value.trim(),
+            valorRealMin: set.realMin.value.trim(),
+            valorRealMax: set.realMax.value.trim(),
+            quantidadeValores: set.quantity.value.trim(),
+            valores: set.values.value.trim()
+          };
+        });
+      }
+
+      function exportStudiesToExcel() {
+        if (typeof XLSX === 'undefined') {
+          alert('Não foi possível exportar: biblioteca XLSX indisponível.');
+          return;
+        }
+
+        var studies = collectStudiesForExport();
+        var hasContent = studies.some(function (study) {
+          return (
+            study.caracteristica ||
+            study.subgrupo ||
+            study.lsl ||
+            study.usl ||
+            study.valorRealMin ||
+            study.valorRealMax ||
+            study.quantidadeValores ||
+            study.valores
+          );
+        });
+
+        if (!hasContent) {
+          alert('Não há dados preenchidos para exportar.');
+          return;
+        }
+
+        var reportLanguage = document.getElementById('reportLanguage').value || 'pt';
+        var rows = [EXPORT_HEADERS];
+        studies.forEach(function (study) {
+          rows.push([
+            study.estudo,
+            study.caracteristica,
+            study.subgrupo,
+            study.lsl,
+            study.usl,
+            study.valorRealMin,
+            study.valorRealMax,
+            study.quantidadeValores,
+            study.valores,
+            reportLanguage
+          ]);
+        });
+
+        var worksheet = XLSX.utils.aoa_to_sheet(rows);
+        var workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Estudos');
+
+        var dateStamp = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, 'estudos-capabilidade-' + dateStamp + '.xlsx');
+      }
+
+      function triggerImportStudies() {
+        var input = document.getElementById('importStudiesFile');
+        if (!input) return;
+        input.value = '';
+        input.click();
+      }
+
+      function handleImportStudies(event) {
+        var file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file) return;
+        if (typeof XLSX === 'undefined') {
+          alert('Não foi possível importar: biblioteca XLSX indisponível.');
+          return;
+        }
+
+        var hasCurrentData = hasAnyInputData() || resultEntries.length > 0;
+        if (hasCurrentData) {
+          var shouldOverwrite = window.confirm(
+            'Já existem dados na tela. Deseja substituir pelos dados do arquivo importado?'
+          );
+          if (!shouldOverwrite) {
+            return;
+          }
+        }
+
+        var reader = new FileReader();
+        reader.onload = function (loadEvent) {
+          try {
+            var arrayBuffer = loadEvent.target.result;
+            var workbook = XLSX.read(arrayBuffer, { type: 'array' });
+            var firstSheetName = workbook.SheetNames[0];
+            if (!firstSheetName) {
+              throw new Error('A planilha está vazia.');
+            }
+
+            var sheet = workbook.Sheets[firstSheetName];
+            var dataRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+            if (!dataRows.length) {
+              throw new Error('Nenhuma linha de dados foi encontrada.');
+            }
+
+            resetStudyInputs();
+            clearCalculatedResultsOnly();
+
+            for (var i = 0; i < Math.min(dataRows.length, studyInputs.length); i++) {
+              var row = dataRows[i];
+              var target = studyInputs[i];
+              target.feature.value = (row.Caracteristica || '').toString().trim();
+              target.subgroup.value = (row.Subgrupo || '').toString().trim();
+              target.lsl.value = (row.LSL || '').toString().trim();
+              target.usl.value = (row.USL || '').toString().trim();
+              target.realMin.value = (row.ValorRealMin || '').toString().trim();
+              target.realMax.value = (row.ValorRealMax || '').toString().trim();
+              target.quantity.value = (row.QuantidadeValores || '').toString().trim();
+              target.values.value = (row.Valores || '').toString().trim();
+            }
+
+            var langFromFile = (dataRows[0].IdiomaRelatorio || '').toString().trim();
+            if (translations[langFromFile]) {
+              document.getElementById('reportLanguage').value = langFromFile;
+            }
+
+            if (dataRows.length > studyInputs.length) {
+              alert(
+                'Importação concluída com sucesso. Apenas os primeiros ' +
+                  studyInputs.length +
+                  ' estudos foram carregados.'
+              );
+            } else {
+              alert('Importação concluída com sucesso.');
+            }
+          } catch (error) {
+            alert('Falha ao importar arquivo: ' + error.message);
+          }
+        };
+
+        reader.onerror = function () {
+          alert('Falha ao ler o arquivo selecionado.');
+        };
+
+        reader.readAsArrayBuffer(file);
+      }
+
+      // =========================
+      //   TRADUÇÃO / TEXTOS
+      // =========================
+
+      var resultEntries = [];
+      var translations = {
+        pt: {
+          reportTitleTemplate: 'Relatório de Capabilidade do Processo para {{feature}}',
+          reportTitleTemplateNoFeature: 'Relatório de Capabilidade do Processo',
+          defaultFeatureName: 'Processo',
+          valueAxisTitle: 'Valor',
+          frequencyAxisTitle: 'Frequência',
+          normalCurveLabel: 'Curva Normal',
+          histogramTooltipFrequency: 'Frequência',
+          meanLabel: 'Média',
+          sigmaOverallLabel: 'Sigma (global)',
+          sigmaWithinLabel: 'Sigma (intra)',
+          nLabel: 'N',
+          subgroupLabel: 'Subgrupo'
+        },
+        en: {
+          reportTitleTemplate: 'Process Capability Report for {{feature}}',
+          reportTitleTemplateNoFeature: 'Process Capability Report',
+          defaultFeatureName: 'Process',
+          valueAxisTitle: 'Value',
+          frequencyAxisTitle: 'Frequency',
+          normalCurveLabel: 'Normal Curve',
+          histogramTooltipFrequency: 'Frequency',
+          meanLabel: 'Mean',
+          sigmaOverallLabel: 'Sigma (overall)',
+          sigmaWithinLabel: 'Sigma (within)',
+          nLabel: 'Sample size',
+          subgroupLabel: 'Subgroup'
+        },
+        es: {
+          reportTitleTemplate: 'Informe de Capacidad del Proceso para {{feature}}',
+          reportTitleTemplateNoFeature: 'Informe de Capacidad del Proceso',
+          defaultFeatureName: 'Proceso',
+          valueAxisTitle: 'Valor',
+          frequencyAxisTitle: 'Frecuencia',
+          normalCurveLabel: 'Curva normal',
+          histogramTooltipFrequency: 'Frecuencia',
+          meanLabel: 'Media',
+          sigmaOverallLabel: 'Sigma (total)',
+          sigmaWithinLabel: 'Sigma (interno)',
+          nLabel: 'Tamaño de la muestra',
+          subgroupLabel: 'Subgrupo'
+        },
+        fr: {
+          reportTitleTemplate: 'Rapport de Capabilité du procédé pour {{feature}}',
+          reportTitleTemplateNoFeature: 'Rapport de Capabilité du procédé',
+          defaultFeatureName: 'Processus',
+          valueAxisTitle: 'Valeur',
+          frequencyAxisTitle: 'Fréquence',
+          normalCurveLabel: 'Courbe normale',
+          histogramTooltipFrequency: 'Fréquence',
+          meanLabel: 'Moyenne',
+          sigmaOverallLabel: 'Sigma (global)',
+          sigmaWithinLabel: 'Sigma (interne)',
+          nLabel: "Taille de l'échantillon",
+          subgroupLabel: 'Sous-groupe'
+        },
+        de: {
+          reportTitleTemplate: 'Prozessfähigkeitsbericht für {{feature}}',
+          reportTitleTemplateNoFeature: 'Prozessfähigkeitsbericht',
+          defaultFeatureName: 'Prozess',
+          valueAxisTitle: 'Wert',
+          frequencyAxisTitle: 'Häufigkeit',
+          normalCurveLabel: 'Normalverteilung',
+          histogramTooltipFrequency: 'Häufigkeit',
+          meanLabel: 'Mittelwert',
+          sigmaOverallLabel: 'Sigma (gesamt)',
+          sigmaWithinLabel: 'Sigma (intern)',
+          nLabel: 'Stichprobengröße',
+          subgroupLabel: 'Untergruppe'
+        },
+        zh: {
+          reportTitleTemplate: '过程能力报告（{{feature}}）',
+          reportTitleTemplateNoFeature: '过程能力报告',
+          defaultFeatureName: '过程',
+          valueAxisTitle: '数值',
+          frequencyAxisTitle: '频率',
+          normalCurveLabel: '正态曲线',
+          histogramTooltipFrequency: '频次',
+          meanLabel: '平均值',
+          sigmaOverallLabel: 'Sigma（总体）',
+          sigmaWithinLabel: 'Sigma（组内）',
+          nLabel: '样本量',
+          subgroupLabel: '子组'
+        },
+        ja: {
+          reportTitleTemplate: '工程能力レポート（{{feature}}）',
+          reportTitleTemplateNoFeature: '工程能力レポート',
+          defaultFeatureName: '工程',
+          valueAxisTitle: '値',
+          frequencyAxisTitle: '頻度',
+          normalCurveLabel: '正規曲線',
+          histogramTooltipFrequency: '頻度',
+          meanLabel: '平均値',
+          sigmaOverallLabel: 'シグマ（全体）',
+          sigmaWithinLabel: 'シグマ（工程内）',
+          nLabel: 'サンプル数',
+          subgroupLabel: 'サブグループ'
+        },
+        ko: {
+          reportTitleTemplate: '공정능력 보고서 ({{feature}})',
+          reportTitleTemplateNoFeature: '공정능력 보고서',
+          defaultFeatureName: '공정',
+          valueAxisTitle: '값',
+          frequencyAxisTitle: '빈도',
+          normalCurveLabel: '정규 곡선',
+          histogramTooltipFrequency: '빈도',
+          meanLabel: '평균',
+          sigmaOverallLabel: '시그마(전체)',
+          sigmaWithinLabel: '시그마(공정 내)',
+          nLabel: '샘플 수',
+          subgroupLabel: '소집단'
+        },
+        it: {
+          reportTitleTemplate: 'Report di capacità di processo per {{feature}}',
+          reportTitleTemplateNoFeature: 'Report di capacità di processo',
+          defaultFeatureName: 'Processo',
+          valueAxisTitle: 'Valore',
+          frequencyAxisTitle: 'Frequenza',
+          normalCurveLabel: 'Curva normale',
+          histogramTooltipFrequency: 'Frequenza',
+          meanLabel: 'Media',
+          sigmaOverallLabel: 'Sigma (complessivo)',
+          sigmaWithinLabel: 'Sigma (interno)',
+          nLabel: 'Dimensione del campione',
+          subgroupLabel: 'Sottogruppo'
+        }
+      };
+
+      function getTranslationPack(lang) {
+        return translations[lang] || translations.pt;
+      }
+
+      function translate(lang, key) {
+        var pack = getTranslationPack(lang);
+        return pack[key] || translations.pt[key] || key;
+      }
+
+      function formatReportTitle(lang, featureName) {
+        var template = translate(lang, 'reportTitleTemplate');
+        var trimmedFeature = (featureName || '').trim();
+        if (!trimmedFeature) {
+          var fallback = translate(lang, 'reportTitleTemplateNoFeature');
+          return fallback || template.replace(' {{feature}}', '').replace('{{feature}}', '');
+        }
+        return template.replace('{{feature}}', trimmedFeature);
+      }
+
+      function getResultLanguage(result) {
+        return (
+          (result && result.reportLanguage) ||
+          document.getElementById('reportLanguage').value ||
+          'pt'
+        );
+      }
+
+      // =========================
+      //   CONTROLE GERAL
+      // =========================
+
+      function handleCalculate() {
+        var reportLanguage = document.getElementById('reportLanguage').value;
+        var statusEl = document.getElementById('status');
+        var button = document.getElementById('calcBtn');
+        var preparedResults = [];
+        var hasAnyFilled = false;
+
+        button.disabled = true;
+        statusEl.textContent = 'Calculando...';
+
+        for (var i = 0; i < studyInputs.length; i++) {
+          var set = studyInputs[i];
+          var columnLabel = 'estudo ' + set.columnNumber;
+          var lsl = set.lsl.value;
+          var usl = set.usl.value;
+          var subgroup = set.subgroup.value;
+          var realMin = set.realMin.value;
+          var realMax = set.realMax.value;
+          var quantity = set.quantity.value;
+          var values = set.values.value;
+          var feature = set.feature.value;
+
+          var hasContent =
+            (lsl && lsl.trim() !== '') ||
+            (usl && usl.trim() !== '') ||
+            (subgroup && subgroup.trim() !== '') ||
+            (realMin && realMin.trim() !== '') ||
+            (realMax && realMax.trim() !== '') ||
+            (quantity && quantity.trim() !== '') ||
+            (values && values.trim() !== '');
+
+          if (!hasContent) {
+            continue;
+          }
+
+          hasAnyFilled = true;
+
+          if (!values.trim()) {
+            statusEl.textContent = '';
+            button.disabled = false;
+            alert('Há falhas no preenchimento da ' + columnLabel + ': informe os valores das medições.');
+            return;
+          }
+
+          try {
+            var featureName = (feature || '').trim();
+            var result = processAndCalculate(featureName, values, lsl, usl, subgroup);
+            result.reportLanguage = reportLanguage;
+            preparedResults.push(result);
+          } catch (err) {
+            statusEl.textContent = '';
+            button.disabled = false;
+            alert('Há falhas no preenchimento da ' + columnLabel + ': ' + err.message);
+            return;
+          }
+        }
+
+        if (!hasAnyFilled) {
+          statusEl.textContent = '';
+          button.disabled = false;
+          alert('Preencha pelo menos um estudo para calcular.');
+          return;
+        }
+
+        preparedResults.forEach(function (result) {
+          renderResults(result);
+        });
+
+        statusEl.textContent = '';
+        button.disabled = false;
+      }
+
+      function renderResults(result) {
+        var section = document.getElementById('resultsSection');
+        var collection = document.getElementById('resultsCollection');
+        section.style.display = 'block';
+
+        var entry = createResultCard(result);
+        collection.appendChild(entry.card);
+        resultEntries.push(entry);
+        entry.deleteButton.addEventListener('click', function () {
+          removeResult(entry);
+        });
+        updateActionButtons();
+
+        requestAnimationFrame(function () {
+          drawHistogram(result, entry.chartContainer);
+          updateStats(result, entry.statsContainer);
+        });
+      }
+
+      function createResultCard(result) {
+        var lang = getResultLanguage(result);
+        var shell = document.createElement('div');
+        shell.className = 'result-card-shell';
+
+        var card = document.createElement('section');
+        card.className = 'card result-card';
+
+        var header = document.createElement('div');
+        header.className = 'result-card__header';
+
+        var title = document.createElement('h2');
+        var featureName = (result.featureName || '').trim();
+        title.textContent = formatReportTitle(lang, featureName);
+
+        var deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'ghost-button ghost-button--outside';
+        deleteBtn.textContent = 'Excluir estudo';
+
+        header.appendChild(title);
+
+        var chartContainer = document.createElement('div');
+        chartContainer.className = 'chart-container';
+        chartContainer.style.position = 'relative';
+
+        var statsContainer = document.createElement('div');
+        statsContainer.className = 'stats';
+
+        card.appendChild(header);
+        card.appendChild(chartContainer);
+        card.appendChild(statsContainer);
+        shell.appendChild(deleteBtn);
+        shell.appendChild(card);
+
+        return {
+          card: shell,
+          chartContainer: chartContainer,
+          statsContainer: statsContainer,
+          deleteButton: deleteBtn
+        };
+      }
+
+      // =========================
+      //   HISTOGRAMA + CURVA
+      //   (SVG puro, local)
+      // =========================
+
+      function percentile(sorted, p) {
+        if (sorted.length === 0) return 0;
+        var index = (sorted.length - 1) * p;
+        var lower = Math.floor(index);
+        var upper = Math.ceil(index);
+        if (upper >= sorted.length) return sorted[lower];
+        var weight = index - lower;
+        return sorted[lower] + (sorted[upper] - sorted[lower]) * weight;
+      }
+
+      function computeBinCount(data, minVal, maxVal) {
+        if (data.length <= 1) return 1;
+        var sorted = data.slice().sort(function (a, b) {
+          return a - b;
+        });
+        var q1 = percentile(sorted, 0.25);
+        var q3 = percentile(sorted, 0.75);
+        var iqr = q3 - q1;
+        var fdWidth = iqr > 0 ? (2 * iqr) / Math.cbrt(data.length) : 0;
+        var fdBins = fdWidth > 0 ? Math.round((maxVal - minVal) / fdWidth) : 0;
+        var sturges = Math.ceil(Math.log2(data.length) + 1);
+        var sqrtChoice = Math.ceil(Math.sqrt(data.length));
+        var binCount = Math.max(10, fdBins, sturges, sqrtChoice);
+        return Math.min(Math.max(binCount, 1), 60);
+      }
+
+      function normalPdf(x, mean, sigma) {
+        var exponent = Math.exp(-0.5 * Math.pow((x - mean) / sigma, 2));
+        return (1 / (sigma * Math.sqrt(2 * Math.PI))) * exponent;
+      }
+
+      function drawHistogram(result, container) {
+        var lang = getResultLanguage(result);
+        var data = result.data;
+        var n = data.length;
+        var specLimits = [];
+        if (Number.isFinite(result.lsl)) specLimits.push(result.lsl);
+        if (Number.isFinite(result.usl)) specLimits.push(result.usl);
+        var minVal = Math.min.apply(null, data.concat(specLimits));
+        var maxVal = Math.max.apply(null, data.concat(specLimits));
+        var binCount = computeBinCount(data, minVal, maxVal);
+        var binWidth = (maxVal - minVal) / binCount || 1;
+        var bins = new Array(binCount).fill(0);
+
+        data.forEach(function (value) {
+          var index = Math.floor((value - minVal) / binWidth);
+          if (index >= binCount) index = binCount - 1;
+          if (index < 0) index = 0;
+          bins[index] += 1;
+        });
+
+        var chartMin = Math.min(minVal, result.mean - 4 * result.sigmaOverall);
+        var chartMax = Math.max(maxVal, result.mean + 4 * result.sigmaOverall);
+
+        var maxFreq = 0;
+        var centers = [];
+        var expectedFreqs = [];
+
+        for (var i = 0; i < binCount; i++) {
+          var binStart = minVal + i * binWidth;
+          var binEnd = binStart + binWidth;
+          var center = (binStart + binEnd) / 2;
+          var pdf = normalPdf(center, result.mean, result.sigmaOverall);
+          var expected = pdf * binWidth * n;
+          centers.push(center);
+          expectedFreqs.push(expected);
+          maxFreq = Math.max(maxFreq, bins[i], expected);
+        }
+
+        maxFreq = maxFreq * 1.1;
+
+        container.innerHTML = '';
+
+        var width = container.clientWidth || 800;
+        var height = container.clientHeight || 520;
+        var marginLeft = 70;
+        var marginRight = 20;
+        var marginTop = 30;
+        var marginBottom = 60;
+        var plotWidth = width - marginLeft - marginRight;
+        var plotHeight = height - marginTop - marginBottom;
+
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', width);
+        svg.setAttribute('height', height);
+        svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+
+        function xScale(v) {
+          return (
+            marginLeft +
+            ((v - chartMin) / (chartMax - chartMin || 1)) * (plotWidth || 1)
+          );
+        }
+
+        function yScale(freq) {
+          return (
+            marginTop +
+            (plotHeight - (freq / (maxFreq || 1)) * plotHeight)
+          );
+        }
+
+        // Eixos
+        var axisX = document.createElementNS(svg.namespaceURI, 'line');
+        axisX.setAttribute('x1', marginLeft);
+        axisX.setAttribute('y1', marginTop + plotHeight);
+        axisX.setAttribute('x2', marginLeft + plotWidth);
+        axisX.setAttribute('y2', marginTop + plotHeight);
+        axisX.setAttribute('stroke', '#455a64');
+        axisX.setAttribute('stroke-width', '1.2');
+        svg.appendChild(axisX);
+
+        var axisY = document.createElementNS(svg.namespaceURI, 'line');
+        axisY.setAttribute('x1', marginLeft);
+        axisY.setAttribute('y1', marginTop);
+        axisY.setAttribute('x2', marginLeft);
+        axisY.setAttribute('y2', marginTop + plotHeight);
+        axisY.setAttribute('stroke', '#455a64');
+        axisY.setAttribute('stroke-width', '1.2');
+        svg.appendChild(axisY);
+
+        // Ticks Y
+        var yTicks = 5;
+        for (var t = 0; t <= yTicks; t++) {
+          var frac = t / yTicks;
+          var freq = maxFreq * frac;
+          var y = yScale(freq);
+          var grid = document.createElementNS(svg.namespaceURI, 'line');
+          grid.setAttribute('x1', marginLeft);
+          grid.setAttribute('x2', marginLeft + plotWidth);
+          grid.setAttribute('y1', y);
+          grid.setAttribute('y2', y);
+          grid.setAttribute('stroke', '#eceff1');
+          grid.setAttribute('stroke-width', '1');
+          svg.appendChild(grid);
+
+          var label = document.createElementNS(svg.namespaceURI, 'text');
+          label.setAttribute('x', marginLeft - 8);
+          label.setAttribute('y', y + 4);
+          label.setAttribute('text-anchor', 'end');
+          label.setAttribute('font-size', '11');
+          label.setAttribute('fill', '#607d8b');
+          label.textContent = Math.round(freq);
+          svg.appendChild(label);
+        }
+
+        // Ticks X
+        var xTicks = Math.min(10, binCount);
+        for (var k = 0; k <= xTicks; k++) {
+          var v = chartMin + (k / xTicks) * (chartMax - chartMin);
+          var x = xScale(v);
+          var labelX = document.createElementNS(svg.namespaceURI, 'text');
+          labelX.setAttribute('x', x);
+          labelX.setAttribute('y', marginTop + plotHeight + 18);
+          labelX.setAttribute('text-anchor', 'middle');
+          labelX.setAttribute('font-size', '11');
+          labelX.setAttribute('fill', '#607d8b');
+          labelX.textContent = v.toFixed(2);
+          svg.appendChild(labelX);
+        }
+
+        // Labels dos eixos
+        var xAxisLabel = document.createElementNS(svg.namespaceURI, 'text');
+        xAxisLabel.setAttribute('x', marginLeft + plotWidth / 2);
+        xAxisLabel.setAttribute('y', height - 18);
+        xAxisLabel.setAttribute('text-anchor', 'middle');
+        xAxisLabel.setAttribute('font-size', '12');
+        xAxisLabel.setAttribute('fill', '#455a64');
+        xAxisLabel.textContent = translate(lang, 'valueAxisTitle');
+        svg.appendChild(xAxisLabel);
+
+        var yAxisLabel = document.createElementNS(svg.namespaceURI, 'text');
+        yAxisLabel.setAttribute('x', 18);
+        yAxisLabel.setAttribute('y', marginTop + plotHeight / 2);
+        yAxisLabel.setAttribute('text-anchor', 'middle');
+        yAxisLabel.setAttribute('font-size', '12');
+        yAxisLabel.setAttribute('fill', '#455a64');
+        yAxisLabel.setAttribute('transform', 'rotate(-90 18 ' + (marginTop + plotHeight / 2) + ')');
+        yAxisLabel.textContent = translate(lang, 'frequencyAxisTitle');
+        svg.appendChild(yAxisLabel);
+
+        // Histograma (barras)
+        var tooltip = getOrCreateTooltip(container);
+
+        for (var iBin = 0; iBin < binCount; iBin++) {
+          var binStart = minVal + iBin * binWidth;
+          var binEnd = binStart + binWidth;
+          var center = (binStart + binEnd) / 2;
+          var freq = bins[iBin];
+
+          var xCenter = xScale(center);
+          var barWidth = (xScale(binEnd) - xScale(binStart)) * 0.9;
+          var x = xCenter - barWidth / 2;
+          var y = yScale(freq);
+          var barHeight = marginTop + plotHeight - y;
+
+          var rect = document.createElementNS(svg.namespaceURI, 'rect');
+          rect.setAttribute('x', x);
+          rect.setAttribute('y', y);
+          rect.setAttribute('width', Math.max(barWidth, 1));
+          rect.setAttribute('height', barHeight);
+          rect.setAttribute('fill', '#1e88e5');
+          rect.setAttribute('opacity', '0.85');
+          rect.setAttribute(
+            'data-tooltip',
+            binStart.toFixed(2) +
+              ' - ' +
+              binEnd.toFixed(2) +
+              '\n' +
+              translate(lang, 'histogramTooltipFrequency') +
+              ': ' +
+              freq
+          );
+
+          rect.addEventListener('mousemove', function (evt) {
+            var text = this.getAttribute('data-tooltip');
+            if (!text) return;
+            tooltip.style.display = 'block';
+            tooltip.textContent = text;
+            var rectBounds = container.getBoundingClientRect();
+            tooltip.style.left = evt.clientX - rectBounds.left + 'px';
+            tooltip.style.top = evt.clientY - rectBounds.top + 'px';
+          });
+
+          rect.addEventListener('mouseleave', function () {
+            tooltip.style.display = 'none';
+          });
+
+          svg.appendChild(rect);
+        }
+
+        // Curva normal
+        var curvePath = document.createElementNS(svg.namespaceURI, 'path');
+        var curveD = '';
+        var steps = 200;
+        for (var s = 0; s <= steps; s++) {
+          var v = chartMin + (s / steps) * (chartMax - chartMin);
+          var pdfVal = normalPdf(v, result.mean, result.sigmaOverall);
+          var expected = pdfVal * binWidth * n;
+          var xC = xScale(v);
+          var yC = yScale(expected);
+          if (s === 0) {
+            curveD += 'M ' + xC + ' ' + yC;
+          } else {
+            curveD += ' L ' + xC + ' ' + yC;
+          }
+        }
+        curvePath.setAttribute('d', curveD);
+        curvePath.setAttribute('fill', 'none');
+        curvePath.setAttribute('stroke', '#000000');
+        curvePath.setAttribute('stroke-width', '2');
+        svg.appendChild(curvePath);
+
+        // Linhas LSL / USL
+        function addSpecLine(value, color) {
+          var xS = xScale(value);
+          var line = document.createElementNS(svg.namespaceURI, 'line');
+          line.setAttribute('x1', xS);
+          line.setAttribute('y1', marginTop);
+          line.setAttribute('x2', xS);
+          line.setAttribute('y2', marginTop + plotHeight);
+          line.setAttribute('stroke', color);
+          line.setAttribute('stroke-width', '2');
+          line.setAttribute('stroke-dasharray', '6,4');
+          svg.appendChild(line);
+        }
+
+        if (Number.isFinite(result.lsl)) {
+          addSpecLine(result.lsl, '#c62828');
+        }
+        if (Number.isFinite(result.usl)) {
+          addSpecLine(result.usl, '#c62828');
+        }
+
+        // Legenda
+        var legendX = marginLeft + 10;
+        var legendY = marginTop + 10;
+        var legendSpacing = 18;
+
+        function addLegendItem(y, color, text, mode) {
+          if (mode === 'line') {
+            var line = document.createElementNS(svg.namespaceURI, 'line');
+            line.setAttribute('x1', legendX);
+            line.setAttribute('y1', y);
+            line.setAttribute('x2', legendX + 20);
+            line.setAttribute('y2', y);
+            line.setAttribute('stroke', color);
+            line.setAttribute('stroke-width', '2');
+            svg.appendChild(line);
+          } else if (mode === 'bar') {
+            var rectLegend = document.createElementNS(svg.namespaceURI, 'rect');
+            rectLegend.setAttribute('x', legendX);
+            rectLegend.setAttribute('y', y - 7);
+            rectLegend.setAttribute('width', 16);
+            rectLegend.setAttribute('height', 14);
+            rectLegend.setAttribute('fill', color);
+            svg.appendChild(rectLegend);
+          }
+
+          var label = document.createElementNS(svg.namespaceURI, 'text');
+          label.setAttribute('x', legendX + 26);
+          label.setAttribute('y', y + 4);
+          label.setAttribute('font-size', '11');
+          label.setAttribute('fill', '#455a64');
+          label.textContent = text;
+          svg.appendChild(label);
+        }
+
+        addLegendItem(
+          legendY,
+          '#1e88e5',
+          translate(lang, 'frequencyAxisTitle'),
+          'bar'
+        );
+        addLegendItem(
+          legendY + legendSpacing,
+          '#000000',
+          translate(lang, 'normalCurveLabel'),
+          'line'
+        );
+        if (specLimits.length > 0) {
+          addLegendItem(legendY + 2 * legendSpacing, '#c62828', 'LSL / USL', 'line');
+        }
+
+        container.appendChild(svg);
+      }
+
+      function getOrCreateTooltip(container) {
+        var tooltip = container.querySelector('.chart-tooltip');
+        if (!tooltip) {
+          tooltip = document.createElement('div');
+          tooltip.className = 'chart-tooltip';
+          tooltip.style.display = 'none';
+          container.appendChild(tooltip);
+        }
+        return tooltip;
+      }
+
+      // =========================
+      //   MÉTRICAS / CARTÕES
+      // =========================
+
+      function updateStats(result, container) {
+        var lang = getResultLanguage(result);
+        var formatter = function (value) {
+          return Number(value).toFixed(3);
+        };
+        var formatMetric = function (value) {
+          return Number.isFinite(value) ? formatter(value) : 'N.A';
+        };
+        var formatSpecLimit = function (value) {
+          return Number.isFinite(value) ? formatter(value) : 'N.A';
+        };
+        container.innerHTML = '';
+
+        var focusMetrics = [
+          { label: 'Cp', value: formatMetric(result.cp), calm: false },
+          { label: 'Cpk', value: formatMetric(result.cpk), calm: false },
+          { label: 'Pp', value: formatMetric(result.pp), calm: true },
+          { label: 'Ppk', value: formatMetric(result.ppk), calm: true }
+        ];
+
+        var supportingMetrics = [
+          { label: translate(lang, 'meanLabel'), value: formatter(result.mean) },
+          {
+            label: translate(lang, 'sigmaOverallLabel'),
+            value: formatter(result.sigmaOverall)
+          },
+          {
+            label: translate(lang, 'sigmaWithinLabel'),
+            value: formatter(result.sigmaWithin)
+          },
+          { label: translate(lang, 'nLabel'), value: result.n },
+          { label: 'LSL', value: formatSpecLimit(result.lsl) },
+          { label: 'USL', value: formatSpecLimit(result.usl) },
+          { label: translate(lang, 'subgroupLabel'), value: result.subgroupSize }
+        ];
+
+        var highlightWrapper = document.createElement('div');
+        highlightWrapper.className = 'metric-highlight';
+        focusMetrics.forEach(function (item) {
+          var card = document.createElement('div');
+          card.className =
+            'metric-card metric-card--focus' + (item.calm ? ' metric-card--calm' : '');
+          card.innerHTML =
+            '<span class="metric-label">' +
+            item.label +
+            '</span><span class="metric-value">' +
+            item.value +
+            '</span>';
+          highlightWrapper.appendChild(card);
+        });
+        container.appendChild(highlightWrapper);
+
+        var gridWrapper = document.createElement('div');
+        gridWrapper.className = 'metric-grid';
+        supportingMetrics.forEach(function (item) {
+          var card = document.createElement('div');
+          card.className = 'metric-card metric-card--subtle';
+          card.innerHTML =
+            '<span class="metric-label">' +
+            item.label +
+            '</span><span class="metric-value">' +
+            item.value +
+            '</span>';
+          gridWrapper.appendChild(card);
+        });
+        container.appendChild(gridWrapper);
+      }
+
+      // =========================
+      //   BOTÕES / ESTADO
+      // =========================
+
+      function updateActionButtons() {
+        var hasResults = resultEntries.length > 0;
+        document.getElementById('clearBtn').disabled = !hasResults;
+        document.getElementById('reportBtn').disabled = !hasResults;
+      }
+
+      function clearResults() {
+        clearCalculatedResultsOnly();
+        document.getElementById('status').textContent = '';
+        resetStudyInputs();
+      }
+
+      function removeResult(entry) {
+        var collection = document.getElementById('resultsCollection');
+        if (entry && entry.card && collection.contains(entry.card)) {
+          collection.removeChild(entry.card);
+        }
+
+        var idx = resultEntries.indexOf(entry);
+        if (idx !== -1) {
+          resultEntries.splice(idx, 1);
+        }
+
+        if (resultEntries.length === 0) {
+          document.getElementById('resultsSection').style.display = 'none';
+        }
+
+        updateActionButtons();
+      }
+
+      function generateReport() {
+        if (resultEntries.length === 0) {
+          alert('Calcule um estudo antes de gerar o relatório.');
+          return;
+        }
+
+        var reportWindow = window.open('', '_blank');
+        if (!reportWindow) {
+          alert('Não foi possível abrir a janela do relatório. Verifique o bloqueador de pop-ups.');
+          return;
+        }
+
+        var styleElement = document.querySelector('style');
+        var styleContent = styleElement ? styleElement.innerHTML : '';
+        var collectionHtml = document.getElementById('resultsCollection').innerHTML;
+
+        var reportHtml =
+          '<!DOCTYPE html>' +
+          '<html>' +
+          '<head>' +
+          '<meta charset="UTF-8" />' +
+          '<title>Relatório de Capabilidade</title>' +
+          '<style>' +
+          styleContent +
+          '\nbody { padding: 24px; background: var(--bg); }' +
+          '\nheader { text-align: center; margin-bottom: 18px; }' +
+          '\nheader h1 { margin-bottom: 12px; color: var(--primary); }' +
+          '\nheader button { max-width: 260px; margin: 0 auto; }' +
+          '\n.results-collection { gap: 24px; }' +
+          '\n@media print { body { padding: 0; } }' +
+          '</style>' +
+          '</head>' +
+          '<body>' +
+          '<header>' +
+          '<h1>Relatório de Capabilidade</h1>' +
+          '<button id="printReportBtn">Imprimir / Salvar em PDF</button>' +
+          '</header>' +
+          '<main>' +
+          '<div id="reportContent" class="results-collection">' +
+          collectionHtml +
+          '</div>' +
+          '</main>' +
+          '<script>' +
+          'document.getElementById("printReportBtn").addEventListener("click", function() { window.print(); });' +
+          '<\/script>' +
+          '</body>' +
+          '</html>';
+
+        reportWindow.document.open();
+        reportWindow.document.write(reportHtml);
+        reportWindow.document.close();
+        reportWindow.focus();
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        buildStudyGrid();
+      });
+
+      window.addEventListener('beforeunload', function (event) {
+        if (resultEntries.length > 0) {
+          var message =
+            'Existem estudos calculados que serão perdidos se você sair desta página.';
+          event.preventDefault();
+          event.returnValue = message;
+          return message;
+        }
+      });
+    </script>
+  </body>
+</html>
